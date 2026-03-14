@@ -1,43 +1,129 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Watermark Upload System</title>
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+<style>
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+body{
+    font-family: Arial;
+    text-align:center;
+    background:#f4f4f4;
+}
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+.container{
+    width:400px;
+    margin:auto;
+    margin-top:80px;
+    background:white;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0px 0px 10px rgba(0,0,0,0.2);
+}
+
+h2{
+    color:#333;
+}
+
+#drop-area{
+    border:2px dashed #888;
+    padding:30px;
+    margin-top:20px;
+    cursor:pointer;
+}
+
+#drop-area:hover{
+    background:#fafafa;
+}
+
+button{
+    margin-top:20px;
+    padding:10px 20px;
+    border:none;
+    background:#3498db;
+    color:white;
+    font-size:16px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#2980b9;
+}
+
+#status{
+    margin-top:20px;
+    font-weight:bold;
+}
+
+img{
+    margin-top:20px;
+    max-width:100%;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Upload Image / Video</h2>
+
+<input type="file" id="fileInput">
+
+<br>
+
+<button onclick="uploadFile()">Upload</button>
+
+<div id="status"></div>
+
+<div id="preview"></div>
+
+</div>
+
+<script>
+
+function uploadFile(){
+
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+
+    if(!file){
+        alert("Please select a file");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    document.getElementById("status").innerHTML = "Uploading and processing...";
+
+    fetch("http://localhost:3000/api/upload",{
+        method:"POST",
+        body:formData
+    })
+    .then(response => response.json())
+    .then(data =>{
+
+        document.getElementById("status").innerHTML="File processed successfully";
+
+        const img = document.createElement("img");
+        img.src = "http://localhost:3000/" + data.file;
+
+        const preview = document.getElementById("preview");
+        preview.innerHTML="";
+        preview.appendChild(img);
+
+    })
+    .catch(error=>{
+        document.getElementById("status").innerHTML="Error uploading file";
+    });
+
+}
+
+</script>
+
+</body>
 </html>
