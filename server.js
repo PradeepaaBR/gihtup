@@ -1,52 +1,66 @@
 const express = require("express");
 const multer = require("multer");
-const mongoose = require("mongoose");
+const sharp = require("sharp");
 const cors = require("cors");
-const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect("mongodb://127.0.0.1:27017/watermarkDB");
-
-const Upload = mongoose.model("Upload", {
-  filename: String,
-  original_path: String,
-  watermarked_path: String,
-  status: String,
-});
-
 const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => cb(null, Date.now() + "_" + file.originalname),
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "_" + file.originalname)
 });
+
 const upload = multer({ storage });
 
-app.post("/api/upload", upload.single("file"), (req, res) => {
-  const originalPath = req.file.path;
-  const outputPath = "watermarked/" + req.file.filename;
+app.post("/api/upload", upload.array("files"), async (req, res) => {
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
 
-  exec(`python watermark.py ${originalPath} ${outputPath}`, async (err) => {
-    if (err) return res.status(500).json({ error: "Processing failed" });
+    let uploadedFiles = [];
 
-    await Upload.create({
-      filename: req.file.filename,
-      original_path: originalPath,
-      watermarked_path: outputPath,
-      status: "processed",
-    });
+    for (let file of files) {
+      let processedFile = file.path;
+      const ext = path.extname(file.filename).toLowerCase();
 
-    res.json({ message: "File uploaded and watermarked" });
-  });
+      if (ext === ".jpg" || ext === ".jpeg" || ext === ".png") {
+        // Get image dimensions
+        const metadata = await sharp(file.path).metadata();
+        const width = metadata.width;
+        const height = metadata.height;
+
+        // Create scalable watermark SVG
+        const watermarkSVG = `
+          <svg width="${width}" height="${height}">
+            <text x="${width - 10}" y="${height - 10}" font-size="20" fill="rgba(255,0,0,0.5)" text-anchor="end">Watermark</text>
+          </svg>
+        `;
+
+        processedFile = "uploads/watermarked_" + file.filename;
+        await sharp(file.path)
+          .composite([{ input: Buffer.from(watermarkSVG), gravity: "southeast" }])
+          .toFile(processedFile);
+
+        fs.unlinkSync(file.path);
+      }
+
+      uploadedFiles.push(processedFile);
+    }
+
+    const urls = uploadedFiles.map(f => "http://localhost:3000/" + f.replace(/\\/g, "/"));
+    res.json({ files: urls });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-app.get("/api/admin/leads", async (req, res) => {
-  if (req.headers.adminpassword !== "admin123") return res.status(403).send("Unauthorized");
-  const data = await Upload.find();
-  res.json(data);
-});
+// Serve uploaded files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.use("/watermarked", express.static("watermarked"));
-
-app.listen(5000, () => console.log("Server running on port 5000"));
+app.listen(3000, () => console.log("Server running on http://localhost:3000"));
