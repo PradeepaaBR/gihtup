@@ -1,128 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Watermark Upload System</title>
-
 <style>
-
-body{
-    font-family: Arial;
-    text-align:center;
-    background:#f4f4f4;
-}
-
-.container{
-    width:400px;
-    margin:auto;
-    margin-top:80px;
-    background:white;
-    padding:30px;
-    border-radius:10px;
-    box-shadow:0px 0px 10px rgba(0,0,0,0.2);
-}
-
-h2{
-    color:#333;
-}
-
-#drop-area{
-    border:2px dashed #888;
-    padding:30px;
-    margin-top:20px;
-    cursor:pointer;
-}
-
-#drop-area:hover{
-    background:#fafafa;
-}
-
-button{
-    margin-top:20px;
-    padding:10px 20px;
-    border:none;
-    background:#3498db;
-    color:white;
-    font-size:16px;
-    border-radius:5px;
-    cursor:pointer;
-}
-
-button:hover{
-    background:#2980b9;
-}
-
-#status{
-    margin-top:20px;
-    font-weight:bold;
-}
-
-img{
-    margin-top:20px;
-    max-width:100%;
-}
-
+body { font-family: Arial; text-align: center; background: #f4f4f4; }
+.container { width: 500px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.2);}
+h2 { color: #333; }
+button { margin-top: 20px; padding: 10px 20px; border: none; background: #3498db; color: white; font-size: 16px; border-radius: 5px; cursor: pointer;}
+button:hover { background: #2980b9;}
+#status { margin-top: 20px; font-weight: bold;}
+#preview img, #preview video { margin-top: 20px; max-width: 100%; display:block; margin:auto;}
 </style>
 </head>
-
 <body>
 
 <div class="container">
-
-<h2>Upload Image / Video</h2>
-
-<input type="file" id="fileInput">
-
-<br>
-
-<button onclick="uploadFile()">Upload</button>
+<h2>Upload Images / Videos</h2>
+<input type="file" id="fileInput" multiple><br>
+<button onclick="uploadFiles()">Upload</button>
 
 <div id="status"></div>
-
 <div id="preview"></div>
-
 </div>
 
 <script>
+async function uploadFiles() {
+    const files = document.getElementById("fileInput").files;
+    const statusDiv = document.getElementById("status");
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+    statusDiv.innerText = "";
 
-function uploadFile(){
+    if (!files.length) { alert("Please select files"); return; }
 
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
+    for (let file of files) {
+        statusDiv.innerText = file.name + " → Uploading...";
+        const formData = new FormData();
+        formData.append("files", file);
 
-    if(!file){
-        alert("Please select a file");
-        return;
+        try {
+            const res = await fetch("http://localhost:3000/api/upload", {
+                method: "POST",
+                body: formData
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            statusDiv.innerText = file.name + " → Processing...";
+            await new Promise(r => setTimeout(r, 500));
+
+            const fileURL = data.files[0];
+            if(file.type.startsWith("image")) {
+                const img = document.createElement("img");
+                img.src = fileURL;
+                preview.appendChild(img);
+            } else if(file.type.startsWith("video")) {
+                const video = document.createElement("video");
+                video.src = fileURL;
+                video.controls = true;
+                preview.appendChild(video);
+            }
+
+            statusDiv.innerText = file.name + " → Done!";
+        } catch(err) {
+            console.error(err);
+            statusDiv.innerText = file.name + " → Error uploading! Check server console.";
+        }
     }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    document.getElementById("status").innerHTML = "Uploading and processing...";
-
-    fetch("http://localhost:3000/api/upload",{
-        method:"POST",
-        body:formData
-    })
-    .then(response => response.json())
-    .then(data =>{
-
-        document.getElementById("status").innerHTML="File processed successfully";
-
-        const img = document.createElement("img");
-        img.src = "http://localhost:3000/" + data.file;
-
-        const preview = document.getElementById("preview");
-        preview.innerHTML="";
-        preview.appendChild(img);
-
-    })
-    .catch(error=>{
-        document.getElementById("status").innerHTML="Error uploading file";
-    });
-
 }
-
 </script>
 
 </body>

@@ -1,32 +1,23 @@
-import React, { useState } from "react";
+import logo from './logo.svg';
+import './App.css';
 
 function App() {
-
-  const [file, setFile] = useState(null);
-
-  const handleUpload = () => {
-    if (!file) {
-      alert("Please select a file first");
-      return;
-    }
-
-    alert("File selected: " + file.name);
-  };
-
   return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h1>Upload Image</h1>
-
-      <input
-        type="file"
-        onChange={(e) => setFile(e.target.files[0])}
-      />
-
-      <br /><br />
-
-      <button onClick={handleUpload}>
-        Upload & Watermark
-      </button>
+    <div className="App">
+      <header className="App-header">
+        <img src={logo} className="App-logo" alt="logo" />
+        <p>
+          Edit <code>src/App.js</code> and save to reload.
+        </p>
+        <a
+          className="App-link"
+          href="https://reactjs.org"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Learn React
+        </a>
+      </header>
     </div>
   );
 }
